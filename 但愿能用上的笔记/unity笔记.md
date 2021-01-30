@@ -53,3 +53,19 @@ bug：CatLikeCoding基础9，物体加速到一定速度离开水面后，在完
 
 总而言之，**加长射线距离**确能在延迟状态下使“浸水程度”参数为负数，即使材质仍没来得及切换，显示上是正确的。
 
+# 5.表面着色器理解
+
+```
+void vert(inout appdata_full vertexData)
+{
+
+}
+void surf (Input IN, inout SurfaceOutputStandard o)
+{
+
+}
+```
+
+appdata_full类型的结构体会内置地转化为片元着色器的输入类型IN，想要设置顶点位置的话改vert函数就行，surf只处理片元的颜色
+
+![图像_2021-01-29_181751.png](https://i.loli.net/2021/01/29/hQ7fM1mVgpsw2Oo.png)
