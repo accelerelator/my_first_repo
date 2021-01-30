@@ -287,3 +287,46 @@ float2 t = abs(2 * frac(uv * _GridResolution) - 1);
 这样u方向的混合就完成了
 
 ![图像_2021-01-28_094323.png](https://i.loli.net/2021/01/28/dzkQEVb52yslFmP.png)
+
+
+
+# 3.波浪
+
+填坑待补
+
+# 4.水面透视
+
+## 4.1水下雾效
+
+雾效的关键都在于由**深度纹理重建像素的世界坐标**，接下来写下我对此处代码以及unityshader 入门精要中13.3代码的对比理解。
+
+为什么需要像素的世界坐标？因为像素离相机越远，雾就越浓。具体像素最终颜色的计算，无非是**纹理采样颜色（用深度影响的雾效系数插值）-> 雾效本身颜色**。雾效系数计算方法很多，但都主要和像素深度有关。
+
+视角空间下的线性深度值，两份代码中共同需要的部分
+
+```
+float linearDepth = LinearEyeDepth(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.uv_depth));
+```
+
+精要中的代码直接获取了具体像素的世界坐标，简要记录如下。
+
+点的世界坐标= 相机的世界坐标（_WorldSpaceCameraPos）+ **深度纹理中该像素的深度值** * 　interpolatedRay 。对于特定时刻，已知由相机原点指向近裁剪平面的四个角能得到四个不同的向量，interpolatedRay就是这四个向量中离像素最近的那一个。最终系数使用的是worldpos.y
+
+```
+float3 worldPos = _WorldSpaceCameraPos + linearDepth * i.interpolatedRay.xyz;
+```
+
+CatLikeCoding教程里，计算的是水下的雾效，因此只获取了水到像素的距离。
+
+screenPos屏幕空间坐标
+
+```
+//深度纹理不检测水面物体，这个是水面下物体相对相机的距离
+	float backgroundDepth =
+		LinearEyeDepth(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, uv));
+	//水体片元对屏幕的距离
+	float surfaceDepth = UNITY_Z_0_FAR_FROM_CLIPSPACE(screenPos.z);
+	//水相对水底的距离，用来求雾效系数
+	float depthDifference = backgroundDepth - surfaceDepth;
+```
+
