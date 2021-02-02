@@ -316,7 +316,11 @@ float linearDepth = LinearEyeDepth(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.u
 float3 worldPos = _WorldSpaceCameraPos + linearDepth * i.interpolatedRay.xyz;
 ```
 
-CatLikeCoding教程里，计算的是水下的雾效，因此只获取了水到像素的距离。
+CatLikeCoding教程里，ColorBelowWater函数计算水下的雾效颜色，因此只获取了水到像素的距离。
+
+```
+o.Emission = ColorBelowWater(IN.screenPos) * (1 - c.a);
+```
 
 screenPos屏幕空间坐标
 
@@ -328,5 +332,39 @@ screenPos屏幕空间坐标
 	float surfaceDepth = UNITY_Z_0_FAR_FROM_CLIPSPACE(screenPos.z);
 	//水相对水底的距离，用来求雾效系数
 	float depthDifference = backgroundDepth - surfaceDepth;
+```
+
+直接return depthDifference已经能看到距离对雾效浓度的影响了，但是我们需要把当前颜色和雾的颜色混合起来，所以在shader里使用了grabpass
+
+```
+GrabPass { "_WaterBackground" }
+```
+
+在函数定义文件里使用深度纹理和屏幕抓取图像
+
+```
+sampler2D _CameraDepthTexture, _WaterBackground;
+...
+float3 backgroundColor = tex2D(_WaterBackground, uv).rgb;
+float fogFactor = exp2(-_WaterFogDensity * depthDifference);
+return lerp(_WaterFogColor, backgroundColor, fogFactor);
+```
+
+在最后的使用里，我们是把抓取并处理后的结果作为最终的颜色，这个颜色不应受任何透明度影响（即透明度应为1）
+
+```
+o.Emission = ColorBelowWater(IN.screenPos) * (1 - c.a);
+```
+
+我们用color函数来处理这一步
+
+![图像_2021-01-31_092855.png](https://i.loli.net/2021/01/31/DC4OInG8btFTB3X.png)
+
+```
+#pragma surface surf Standard alpha finalcolor:ResetAlpha
+
+void ResetAlpha (Input IN, SurfaceOutputStandard o, inout fixed4 color) {
+			color.a = 1;
+		}
 ```
 
